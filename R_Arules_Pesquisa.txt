@@ -1,0 +1,42 @@
+#MATEUS DO NASCIMENTO MAGALHÃES DA SILVA
+#FABRICIO ALMEIDA DA SILVA NUNES
+#ISMAEL WESLLEY NEVES DE BRITO
+
+### Ingestão de dados
+
+# leitura do arquivo pesquisa.xlsx com a função read.xlsx do pacote "xlsx", carregado na lista 'data'
+data <- read.xlsx("H:\\Documents\\DOCUMENTOS_FACULDADE\\POSDS_PROJETOS\\pesquisa", 1, header=TRUE)
+#criação de um dataframe 'dfdata' com os dados da lista 'data'
+dfdata <- data.frame(data)
+#limpeza de linhas que contenham nulo (NA ou NAn)
+dfdata<-dfdata[complete.cases(dfdata),]
+
+###Mineração de regras de associação
+
+##Transformação em arquivo csv e carregamento de transações
+
+#Escrever um csv com o conteúdo do dataframe dfdata de nome 'dfdatacsv.csv' para ser lido pelo apriori 
+write.csv(dfdata, "H:\\Documents\\DOCUMENTOS_FACULDADE\\POSDS_PROJETOS\\dfdatacsv.csv", row.names= FALSE)
+#leitura de transações (registros com um conjunto de itens) do csv 'dfdatacsv.csv'
+dfdata_tran=read.transactions("H:\\Documents\\DOCUMENTOS_FACULDADE\\POSDS_PROJETOS\\dfdatacsv.csv")
+#remoção do cabeçalho do conjunto de transações gerado 'dfdata_tran'
+dfdata_tran<-dfdata_tran[-1,]
+
+##Mineração do conjunto de transações 'dfdata_tran'
+
+#mineração de regras de associação 'dfdatarules'
+dfdatarules<-apriori(dfdata_tran,parameter = list(support=0.05,confidence=0.1,minlen=1))
+#carregamento das regras obtidas no dataframe 'dfdatarulesdf'
+#lhs -> left-hand-set: antecedente | rhs -> Right-hand-set: consequente
+dfdatarulesdf=data.frame(lhs=labels(lhs(dfdatarules)),rhs=labels(rhs(dfdatarules)),dfdatarules@quality)
+
+### Exibição dos resultados
+#Lista de itens frequentes
+frequentItems <- eclat (dfdata_tran, parameter = list(supp = 0.05, maxlen = 10))
+#Exibição da lista de itens frequentes
+inspect(frequentItems)
+#Gráfico de frequência absoluta das transações
+itemFrequencyPlot(dfdata_tran, topN=10, type="absolute", main="Item Frequency Absolute")
+#Gráfico de frequência relativa das transações
+itemFrequencyPlot(dfdata_tran, topN=10, type="relative", main="Item Frequency Relative")
+

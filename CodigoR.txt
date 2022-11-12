@@ -1,0 +1,324 @@
+#MATEUS DO NASCIMENTO MAGALHÃES DA SILVA
+#FABRICIO ALMEIDA DA SILVA NUNES
+#ISMAEL WESLLEY NEVES DE BRITO
+
+
+#Importa a biblíoteca utilizada para ler a planilha de dados
+library(readxl)
+
+#Importa a biblíoteca utilizada para gráficos mais bonitos
+library(ggplot2)
+
+#-------------------------------------------------------------------------------------------------------------------
+#indica o endereço dos dados
+url<-c("C:\\Users\\leloe\\Desktop\\R_Trabalho\\pesquisa.xlsx")
+
+#Indica o tipo das colunas a serem importadas
+colunas<-c("text","text","text","numeric","text","text")
+
+#Dias da Semana
+dias<-c("Domingo","2ª Feira","3ª Feira","4ª Feira","5ª Feira","6ª Feira")
+
+#Turnos
+turnos<-c("Noite","Noite","Noite","","Manhã","Manhã","Manhã")
+
+#Tempo
+tempos<-c("1º","2º","3º","","1º","2º","3º")
+
+
+#importa a planilha de dados
+DB <- read_excel(path=url,sheet = 1,skip=0,col_types=colunas)   
+
+#Elimina valones nulos
+DB <- na.omit(DB)
+
+#Remove uma coluna repetida
+DB[5] <- NULL
+
+#Renomeia a ultima coluna para efeitos de estética
+names(DB)[names(DB) == 'PESQ2'] <- 'MODALIDADE'
+
+
+#Transforma 1 em Masculino e 2 em Feminino
+DB$SEXO[DB$SEXO==1]<-"Masculino"
+DB$SEXO[DB$SEXO==2]<-"Feminino"
+
+
+#Transforma P em Presencial, H em híbrido e R em Remoto
+DB$MODALIDADE[DB$MODALIDADE=="P"]<-"Presencial"
+DB$MODALIDADE[DB$MODALIDADE=="H"]<-"Híbrido"
+DB$MODALIDADE[DB$MODALIDADE=="R"]<-"Remoto"
+
+
+#Pega o terceiro dígito da turma e transforma em dia da semana
+DB$DIA <- dias[as.integer(substr(DB$TURMA,3,3))]
+
+#Pega o quarto dígito da turma e transforma em turno
+DB$TURNO <- turnos[as.integer(substr(DB$TURMA,4,4))]
+
+#Pega o quarto dígito da turma e transforma em tempo
+DB$TEMPO <- tempos[as.integer(substr(DB$TURMA,4,4))]
+
+#-------------------------------------------------------------------------------------------------------------------
+#Função para exibir o gráfico de pizza
+pizza<-function(dados,titulo=""){
+  
+  pie(table(dados),main=titulo,radius=0.7,labels=paste0(sort(unique(dados)),"\n",round(table(dados)/284*100,digits = 2),"%"),col = rainbow(10))
+  
+  legend("topleft", legend = paste(sort(unique(dados)),"-",table(dados)),fill =  rainbow(11)[-4],text.font=4, bg='lightblue',cex=0.9,title="Legenda")
+  
+}
+
+#-------------------------------------------------------------------------------------------------------------------
+#Função para exibir o gráfico de pizza com GGPlot
+GGpizza<-function(dados,titulo=""){
+  
+  df <- data.frame(nomes=rownames(table(dados)),valores=as.vector(table(dados)))
+  
+  ggplot(df, aes(x = "", y = valores, fill = paste(nomes,"-",valores))) +
+    geom_col(color = "black") +
+    scale_fill_manual(values=rainbow(11)[-4])+
+    coord_polar(theta = "y")  +
+    xlab("") + ylab("")+
+    ggtitle(titulo)+
+    guides(fill=guide_legend(title="Legenda"))+
+    geom_text(aes(x = 1.2,label = paste0(round(valores/284*100,digits = 2),"%") ), size=4.8, position=position_stack(vjust=0.6)) +
+    theme_void()+
+    theme(plot.title = element_text(size = 17, face = "bold"),axis.text = element_blank(),panel.grid.major.x = element_line(),panel.background = element_rect(fill = "gray"))
+  
+}
+
+#-------------------------------------------------------------------------------------------------------------------
+#calculo de desvio e variancia
+p_var_sd <- function(x) {
+  var<-sum((x - mean(x))**2) / length(x)
+  print (var)
+  print (sqrt(var))
+}
+
+#-------------------------------------------------------------------------------------------------------------------
+#Função para exibir o gráfico de Barra
+barra<-function(dados,titulo=""){
+  
+  t=as.array(strsplit(titulo," ")[[1]])
+  
+  yText=t[length(t)]
+  
+  graf=barplot(table(dados),main=titulo,col = rainbow(11)[-4],ylab = "Quantidade de Votos",xlab = yText,border="black",beside=TRUE)
+  text(x = graf, y = table(dados)/2, labels = table(dados))
+  
+}
+
+#-------------------------------------------------------------------------------------------------------------------
+#Função para exibir o gráfico de Barra com GGPlot
+GGbarra<-function(dados,titulo=""){
+  
+  df <- data.frame(nomes=rownames(table(dados)),valores=as.vector(table(dados)))
+  
+  t<-as.array(strsplit(titulo," ")[[1]])
+  xText<-t[length(t)]
+  
+  texto<-as.character(table(dados))
+  
+  cores<-rainbow(11)[-4]
+  
+  # Barplot
+  ggplot(df, aes(x=nomes, y=valores)) + 
+    geom_bar(stat = "identity",fill=cores[1:(length(df[,1]))],colour="black",size=1)+
+    xlab(xText) + ylab("Votos")+
+    ggtitle(titulo)+
+    geom_text(aes(y=valores*0.5, label=valores),fontface='bold')+
+    theme(plot.title = element_text(size = 17, face = "bold"))
+  
+}
+
+#-------------------------------------------------------------------------------------------------------------------
+#Função para exibir o gráfico de Barra com GGPlot
+GGbarraDupla<-function(dados1,dados2,titulo=""){
+  
+  df <- data.frame(
+    x = rep(rownames(table(dados2)),each=length(table(dados1))),
+    y = array(table(dados1,dados2)),
+    g = 1:length(table(dados1))
+  )
+  
+  cores<-rep(rainbow(3),2)
+  
+  legenda<-rep(rownames(table(dados1)),length(table(dados2)))
+  
+  ggplot(df, aes(x=x, y=y, group = g,fill = legenda)) +
+    geom_col(position = "dodge", colour = "black")+
+    xlab("") + ylab("Votos")+
+    geom_text(aes(label = y,y=y*0.5), position = position_dodge(0.9),fontface='bold')+
+    ggtitle(titulo)
+  
+} 
+
+
+
+#-------------------------------------------------------------------------------------------------------------------
+#Exibe os Dados importados e alterados
+View(DB)
+
+
+#-------------------------------------------------------------------------------------------------------------------
+#Quantidades de alunos em cada categoria distinta
+table(DB$TURMA)
+table(DB$DISCIPLINA)
+table(DB$PERÍODO)
+table(DB$SEXO)
+table(DB$MODALIDADE)
+table(DB$DIA)
+table(DB$TURNO)
+table(DB$TEMPO)
+
+
+#-------------------------------------------------------------------------------------------------------------------
+#Gráficos e estatísticas para cada coluna
+
+#TURMA
+GGbarra(DB$TURMA,"Quantidade de votos por Turma")
+GGpizza(DB$TURMA,"Percentual de votos por Turma")
+summary(as.data.frame(table(DB$TURMA)))
+p_var_sd(table(DB$TURMA))
+
+#DISCIPLINA
+GGbarra(DB$DISCIPLINA,"Quantidade de votos por Disciplina")
+GGpizza(DB$DISCIPLINA,"Percentual de votos por Disciplina")
+summary(as.data.frame(table(DB$DISCIPLINA)))
+p_var_sd(table(DB$DISCIPLINA))
+
+#PERÍODO
+GGbarra(DB$PERÍODO,"Quantidade de votos por Período")
+GGpizza(DB$PERÍODO,"Percentual de votos por Período")
+summary(as.data.frame(table(DB$PERÍODO)))
+p_var_sd(table(DB$PERÍODO))
+
+#SEXO
+GGbarra(DB$SEXO,"Quantidade de votos por Sexo")
+GGpizza(DB$SEXO,"Percentual de votos por Sexo")
+summary(as.data.frame(table(DB$SEXO)))
+p_var_sd(table(DB$SEXO))
+
+#MODALIDADE
+GGbarra(DB$MODALIDADE,"Quantidade de votos por Modalidade")
+GGpizza(DB$MODALIDADE,"Percentual de votos por Modalidade")
+summary(as.data.frame(table(DB$DIA)))
+p_var_sd(table(DB$DIA))
+
+#DIA
+GGbarra(DB$DIA,"Quantidade de votos por Dia")
+GGpizza(DB$DIA,"Percentual de votos por Dia")
+summary(as.data.frame(table(DB$TURNO)))
+p_var_sd(table(DB$TURNO))
+
+#TURNO
+GGbarra(DB$TURNO,"Quantidade de votos por Turno")
+GGpizza(DB$TURNO,"Percentual de votos por Turno")
+summary(as.data.frame(table(DB$TEMPO)))
+p_var_sd(table(DB$TEMPO))
+
+#TEMPO
+GGbarra(DB$TEMPO,"Quantidade de votos por Tempo")
+GGpizza(DB$TEMPO,"Percentual de votos por Tempo")
+summary(as.data.frame(table(DB$MODALIDADE)))
+p_var_sd(table(DB$MODALIDADE))
+
+
+
+#-------------------------------------------------------------------------------------------------------------------
+#Formas de pesquisar sobre os dados
+subset(DB,SEXO=="Masculino")
+subset(DB,TURNO=="Noite")
+subset(DB,PERÍODO=="3P")
+subset(DB,DISCIPLINA=="ESTR")
+subset(DB,TEMPO=="2º")
+subset(DB,MODALIDADE=="Híbrido")
+subset(DB,TURMA=="T927")
+subset(DB,DIA=="4ª Feira")
+
+#-------------------------------------------------------------------------------------------------------------------
+#Relacionando dados
+table(DB$SEXO,DB$DIA)
+table(DB$TURNO,DB$MODALIDADE)
+table(DB$TEMPO,DB$MODALIDADE)
+table(DB$SEXO,DB$MODALIDADE)
+table(DB$SEXO,DB$TURMA)
+table(DB$TEMPO,DB$TURNO,DB$MODALIDADE)
+
+
+#-------------------------------------------------------------------------------------------------------------------
+#Relacionamentos Duplos
+
+GGbarraDupla(DB$MODALIDADE,DB$SEXO,"Gráfico Modalidade x Sexo")
+
+GGbarraDupla(DB$SEXO,DB$MODALIDADE,"Gráfico Sexo x Modalidade")
+
+GGbarraDupla(DB$TURNO,DB$SEXO,"Gráfico Turno x Turma")
+
+GGbarraDupla(DB$DISCIPLINA,DB$MODALIDADE,"Gráfico Disciplina x Modalidade")
+
+GGbarraDupla(DB$MODALIDADE,DB$DISCIPLINA,"Gráfico Modalidade x Disciplina")
+
+GGbarraDupla(DB$TEMPO,DB$SEXO,"Gráfico Dia x tempo")
+
+
+
+table(DB$TURMA)
+table(DB$DISCIPLINA)
+table(DB$PERÍODO)
+table(DB$SEXO)
+table(DB$MODALIDADE)
+table(DB$DIA)
+table(DB$TURNO)
+table(DB$TEMPO)
+
+
+table(DB$TURNO,DB$TEMPO,DB$MODALIDADE)
+
+GGbarraDupla(DB$MODALIDADE,DB$TURMA,"Gráfico Modalidade x Turma")
+GGbarraDupla(DB$MODALIDADE,DB$DISCIPLINA,"Gráfico Modalidade x Disciplina")
+GGbarraDupla(DB$MODALIDADE,DB$PERÍODO,"Gráfico Modalidade x Periodo")
+GGbarraDupla(DB$MODALIDADE,DB$SEXO,"Gráfico Modalidade x Sexo")
+GGbarraDupla(DB$MODALIDADE,DB$DIA,"Gráfico Modalidade x Dia")
+GGbarraDupla(DB$MODALIDADE,DB$TURNO,"Gráfico Modalidade x Turno")
+GGbarraDupla(DB$MODALIDADE,DB$TEMPO,"Gráfico Modalidade x Tempo")
+
+
+#-------------------------------------------------------------------------------------------------------------------
+#RESPONDENDO ALGUMAS DAS PERGUNTAS
+
+#Escolha dos alunos que estudam no primeiro tempo do turno da noite.
+table(DB$MODALIDADE[DB$TURNO=="Noite" & DB$TEMPO=="1º"])
+
+#Escolha dos alunos que estudam no último tempo no turno da noite.
+table(DB$MODALIDADE[DB$TURNO=="Noite" & DB$TEMPO=="3º"])
+
+#Escolha dos alunos que estudam no primeiro tempo do turno da manhã.
+table(DB$MODALIDADE[DB$TURNO=="Manhã" & DB$TEMPO=="1º"])
+
+#Escolha dos alunos que estudam no último tempo no turno da manhã.
+table(DB$MODALIDADE[DB$TURNO=="Manhã" & DB$TEMPO=="3º"])
+
+#Quantidade de Homens e Mulheres separado por Turma
+table(DB$TURMA,DB$SEXO)
+
+#Escolha das alunas por tempo de aula, independente do turno
+table(DB$MODALIDADE[DB$SEXO=="Feminino"],DB$TEMPO[DB$SEXO=="Feminino"])
+
+
+#-------------------------------------------------------------------------------------------------------------------
+
+df <- data.frame(
+  valores =c(rep("Hibrido",39),rep("Presencial",58),rep("Remoto",80))
+)
+
+
+GGpizza(df,"Percentual de Pontuação")
+
+
+
+
+
+
+
